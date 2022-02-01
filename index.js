@@ -32,6 +32,13 @@ const requestsSet = [{
     "toBlock": "0x1566762"
 }]
 
+/*
+* , {
+    "address": "0x72cb10c6bfa5624dd07ef608027e366bd690048f",
+    "fromBlock": "0x1566C28", // 22441000
+    "toBlock": "0x1567010" // 22442000
+}*/
+
 const wrapRequest = (param) => {
     return {
         "jsonrpc": "2.0",
@@ -52,36 +59,42 @@ const sleep = (timeout) => new Promise(resolve => setTimeout(resolve, timeout))
 
 const runTestSuite = async (rpcUrl, requestsCount = REQUESTS_COUNT) => {
     let totalItemsReceived = 0
+    let errorsCount = 0
     const timeStart = Date.now()
-    try {
-        const paramsSet = Array(requestsCount).fill(null).map((_, index) => {
-            return requestsSet[index % requestsSet.length]
-        }).flat()
+    const paramsSet = Array(requestsCount).fill(null).map((_, index) => {
+        return requestsSet[index % requestsSet.length]
+    }).flat()
 
-        const paramsChunks = splitToChunks(paramsSet, CHUNK_SIZE)
+    const paramsChunks = splitToChunks(paramsSet, CHUNK_SIZE)
 
-        for(let i=0; i < paramsChunks.length; i++) {
-            const chunkTimeStart = Date.now()
-            const chunk = paramsChunks[i]
+    for(let i=0; i < paramsChunks.length; i++) {
+        const chunkTimeStart = Date.now()
+        const chunk = paramsChunks[i]
 
-            const results = await Promise.all(chunk.map(async (params) => {
+        const results = await Promise.all(chunk.map(async (params) => {
+            try {
                 const {data} = await axios.post(rpcUrl, wrapRequest(params))
                 return data.result
-            })).then(results => results.flat())
-
-            totalItemsReceived += results.length
-
-            if (i < paramsChunks.length - 1) {
-                console.log(`Completed ${(i + 1)} chunk(s) of ${paramsChunks.length} (${Date.now() - chunkTimeStart} ms)`)
+            } catch (e) {
+                if (errorsCount === 0) {
+                    console.error('ERROR on request:', e.message)
+                }
+                errorsCount += 1
+                return []
             }
-            await sleep(500)
+        })).then(results => results.flat())
+
+        totalItemsReceived += results.length
+
+        if (i < paramsChunks.length - 1) {
+            console.log(`Completed ${(i + 1)} chunk(s) of ${paramsChunks.length} (${Date.now() - chunkTimeStart} ms)`)
         }
-    } catch (e) {
-        console.error('ERROR on request:', e.message)
+        await sleep(2000)
     }
     return {
         totalTime: Date.now() - timeStart,
-        totalItemsReceived
+        totalItemsReceived,
+        errorsCount
     }
 }
 
@@ -90,11 +103,12 @@ const runTests = async () => {
     for(let i=0; i < rpcUrls.length; i++) {
         const url = rpcUrls[i]
         console.log(`Starting tests using RPC ${url} (${i + 1} of ${rpcUrls.length})`)
-        const multipleResult = await runTestSuite(url, REQUESTS_COUNT)
+        const result = await runTestSuite(url, REQUESTS_COUNT)
         console.log(`
             Multiple concurrent requests (requests count = ${REQUESTS_COUNT}) test completed.
-            Total time spent: ${multipleResult.totalTime} ms
-            Total results received: ${multipleResult.totalItemsReceived}
+            Total time spent: ${result.totalTime} ms
+            Total results received: ${result.totalItemsReceived}
+            Errors count: ${result.errorsCount}
         `)
     }
 }
