@@ -1,43 +1,10 @@
 const axios = require('axios').default;
+const fs = require('fs');
 require('dotenv').config()
 let {NODE_RPC_URL, INDEXER_RPC_URL, REQUESTS_COUNT, CHUNK_SIZE} = process.env
 REQUESTS_COUNT = +REQUESTS_COUNT
 
-const requestsSet = [{
-    "address": "0xcf664087a5bb0237a0bad6742852ec6c8d69a27a",
-    "topics": ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"], // Transfer
-    "fromBlock": "0x155E758", // 22407000
-    "toBlock": "0x155E94C" // 22407500
-}, {
-    "address": "0xcf664087a5bb0237a0bad6742852ec6c8d69a27a",
-    "topics": ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"],
-    "fromBlock": "0x155E94C", // 22407500
-    "toBlock": "0x155EB40" // 22408000
-}, {
-    "blockhash": "0xa4d855c788d9514a5ce5190cb6a4964c1d6a1bcd4b3a4ad3108999e8bbc47add" // #22407000
-}, {
-    "fromBlock": "0x155E7D3", // 22407123
-    "toBlock": "0x155E7D3",
-}, {
-    "topics": ["0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925"], // Approval
-    "fromBlock": "0x155E758",
-    "toBlock": "0x155E94C"
-}, {
-    "topics": ["0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822"],
-    "fromBlock": "0x155E758",
-    "toBlock": "0x155E94C"
-}, {
-    "topics": ["0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822"],
-    "fromBlock": "0x22439778", // big block 22439778 with 1700 txs
-    "toBlock": "0x1566762"
-}]
-
-/*
-* , {
-    "address": "0x72cb10c6bfa5624dd07ef608027e366bd690048f",
-    "fromBlock": "0x1566C28", // 22441000
-    "toBlock": "0x1567010" // 22442000
-}*/
+const requestsSet = JSON.parse(fs.readFileSync('requests.json'));
 
 const wrapRequest = (param) => {
     return {
